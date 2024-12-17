@@ -6,6 +6,27 @@
     <title>Hola Mundo</title>
 </head>
 <body>
-    <h1>¡Hola Mundo!</h1>
+    <h1>Hola Mundo desde 
+        <span id="instance-ip"></span>
+    </h1>
+
+    <script>
+        // Obtener la dirección IP local de la instancia (puedes usar un servicio externo si lo prefieres)
+        fetch('http://169.254.169.254/latest/meta-data/public-ipv4')
+            .then(response => response.text())
+            .then(ip => {
+                // Mostrar la IP en la página
+                document.getElementById('instance-ip').innerText = ip;
+
+                // Si la IP contiene una parte específica (como la IP de QA), muestra un mensaje especial
+                if (ip.includes('qa')) {
+                    document.querySelector('h1').innerText = 'Hola Mundo desde QA (IP: ' + ip + ')';
+                }
+            })
+            .catch(error => {
+                console.error("Error al obtener la IP:", error);
+                document.getElementById('instance-ip').innerText = "No se pudo obtener la IP";
+            });
+    </script>
 </body>
 </html>

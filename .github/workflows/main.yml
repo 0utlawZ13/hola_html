@@ -1,52 +1,36 @@
-name: CI/CD Workflow
+name: Deploy to Production
 
 on:
-  push:
-    branches:
-      - qa
   pull_request:
     branches:
       - main
 
 jobs:
-  deploy-to-qa:
-    if: github.ref == 'refs/heads/qa'
+  deploy:
     runs-on: ubuntu-latest
-    env:
-      QA_IP: ${{ secrets.QA_INSTANCE_IP }}
-      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v3
 
-      - name: Deploy to QA instance
-        run: |
-          echo "Deploying to QA instance..."
-          echo "$PRIVATE_KEY" > key.pem
-          chmod 400 key.pem
-          ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@$QA_IP 'sudo mkdir -p /var/www/html && echo "Hola Mundo en QA" | sudo tee /var/www/html/index.html'
+    - name: Set up SSH
+      uses: webfactory/ssh-agent@v0.5.3
+      with:
+        ssh-private-key: ${{ secrets.PRIVATE_KEY }}
 
-  deploy-to-production:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    env:
-      PROD_1_IP: ${{ secrets.PROD_INSTANCE_1_IP }}
-      PROD_2_IP: ${{ secrets.PROD_INSTANCE_2_IP }}
-      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Copy files to Production instances
+      run: |
+        # Desplegar en cada una de las 4 instancias de producción
+        for INSTANCE in ${{ secrets.INSTANCE_1_IP }} ${{ secrets.INSTANCE_2_IP }} ${{ secrets.INSTANCE_3_IP }} ${{ secrets.INSTANCE_4_IP }}
+        do
+          ssh -o StrictHostKeyChecking=no ubuntu@$INSTANCE 'mkdir -p /var/www/html'
+          scp -o StrictHostKeyChecking=no -r * ubuntu@$INSTANCE:/var/www/html
+        done
 
-      - name: Deploy to Production Instance 1
-        run: |
-          echo "Deploying to Production Instance 1..."
-          echo "$PRIVATE_KEY" > key.pem
-          chmod 400 key.pem
-          ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@$PROD_1_IP 'sudo mkdir -p /var/www/html && echo "Hola Mundo en PROD" | sudo tee /var/www/html/index.html'
-
-      - name: Deploy to Production Instance 2
-        run: |
-          echo "Deploying to Production Instance 2..."
-          echo "$PRIVATE_KEY" > key.pem
-          chmod 400 key.pem
-          ssh -o StrictHostKeyChecking=no -i key.pem ubuntu@$PROD_2_IP 'sudo mkdir -p /var/www/html && echo "Hola Mundo en PROD" | sudo tee /var/www/html/index.html'
+    - name: Restart Nginx on Production instances
+      run: |
+        # Reiniciar Nginx en cada instancia
+        for INSTANCE in ${{ secrets.INSTANCE_1_IP }} ${{ secrets.INSTANCE_2_IP }} ${{ secrets.INSTANCE_3_IP }} ${{ secrets.INSTANCE_4_IP }}
+        do
+          ssh -o StrictHostKeyChecking=no ubuntu@$INSTANCE 'sudo systemctl restart nginx'
+        done
