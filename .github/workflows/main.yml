@@ -20,17 +20,17 @@ jobs:
 
     - name: Copy files to Production instances
       run: |
-        # Desplegar en cada una de las 4 instancias de producción
         for INSTANCE in ${{ secrets.INSTANCE_1_IP }} ${{ secrets.INSTANCE_2_IP }} ${{ secrets.INSTANCE_3_IP }} ${{ secrets.INSTANCE_4_IP }}
         do
-          ssh -o StrictHostKeyChecking=no ubuntu@$INSTANCE 'mkdir -p /var/www/html'
-          scp -o StrictHostKeyChecking=no -r * ubuntu@$INSTANCE:/var/www/html
+          ssh -o StrictHostKeyChecking=no ubuntu@$INSTANCE 'sudo mkdir -p /var/www/html'
+          scp -o StrictHostKeyChecking=no -r * ubuntu@$INSTANCE:/tmp
+          ssh -o StrictHostKeyChecking=no ubuntu@$INSTANCE 'sudo mv /tmp/* /var/www/html'
         done
 
     - name: Restart Nginx on Production instances
       run: |
-        # Reiniciar Nginx en cada instancia
         for INSTANCE in ${{ secrets.INSTANCE_1_IP }} ${{ secrets.INSTANCE_2_IP }} ${{ secrets.INSTANCE_3_IP }} ${{ secrets.INSTANCE_4_IP }}
         do
           ssh -o StrictHostKeyChecking=no ubuntu@$INSTANCE 'sudo systemctl restart nginx'
         done
+
